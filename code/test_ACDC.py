@@ -41,7 +41,7 @@ def test_single_volume(case, net, test_save_path, FLAGS):
         slice = image[ind, :, :]
         x, y = slice.shape[0], slice.shape[1]
         slice = zoom(slice, (256 / x, 256 / y), order=0)
-        input = torch.from_numpy(slice).unsqueeze(0).unsqueeze(0).float().cuda()
+        input = torch.from_numpy(slice).unsqueeze(0).unsqueeze(0).float()
         net.eval()
         with torch.no_grad():
             out_main = net(input)

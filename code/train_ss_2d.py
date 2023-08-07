@@ -8,7 +8,7 @@ import time
 
 import numpy as np
 import torch
-import torch.backends.cudnn as cudnn
+# import torch.backends.cudnn as cudnn
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -23,7 +23,7 @@ from networks.net_factory import net_factory
 from utils import losses, ramps, feature_memory, contrastive_losses, val_2d
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--root_path', type=str, default='./data/ACDC', help='Name of Experiment')
+parser.add_argument('--root_path', type=str, default='D:/unet/SS-Net/data/ACDC', help='Name of Experiment')
 parser.add_argument('--exp', type=str, default='SSNet', help='experiment_name')
 parser.add_argument('--model', type=str, default='unet', help='model_name')
 parser.add_argument('--max_iterations', type=int, default=30000, help='maximum epoch number to train')
@@ -60,15 +60,24 @@ def get_current_consistency_weight(epoch):
     # Consistency ramp-up from https://arxiv.org/abs/1610.02242
     return args.consistency * ramps.sigmoid_rampup(epoch, args.consistency_rampup)
 
+def worker_init_fn( worker_id):
+    random.seed(args.seed + worker_id)
+
 def train(args, snapshot_path):
     base_lr = args.base_lr
     num_classes = args.num_classes
     max_iterations = args.max_iterations
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+    # Disable CUDA_VISIBLE_DEVICES
+    device = torch.device('cpu')
+    args.gpu = ''
+    os.environ.pop('CUDA_VISIBLE_DEVICES', None)
+    # os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
     model = net_factory(net_type=args.model, in_chns=1, class_num=num_classes)
 
-    def worker_init_fn(worker_id):
-        random.seed(args.seed + worker_id)
+    # def worker_init_fn(worker_id):
+    #     random.seed(args.seed + worker_id)
+
+
 
     db_train = BaseDataSets(base_dir=args.root_path, 
                             split="train", 
@@ -106,7 +115,7 @@ def train(args, snapshot_path):
         for _, sampled_batch in enumerate(trainloader):
 
             volume_batch, label_batch = sampled_batch['image'], sampled_batch['label']
-            volume_batch, label_batch = volume_batch.cuda(), label_batch.cuda()
+            volume_batch, label_batch = volume_batch, label_batch
 
             outputs, embedding= model(volume_batch)
             outputs_soft = F.softmax(outputs, dim=1)
@@ -224,17 +233,21 @@ def train(args, snapshot_path):
 
 
 if __name__ == "__main__":
+    device = torch.device('cpu')
+    args.gpu = ''
     if args.deterministic:
-        cudnn.benchmark = False
-        cudnn.deterministic = True
+        # cudnn.benchmark = False
+        # cudnn.deterministic = True
         random.seed(args.seed)
         np.random.seed(args.seed)
         torch.manual_seed(args.seed)
-        torch.cuda.manual_seed(args.seed)
+        # torch.cuda.manual_seed(args.seed)
 
-    snapshot_path = "./model/ACDC_{}_{}_labeled/{}".format(args.exp, args.labelnum, args.model)
+    snapshot_path = "D:/unet/SS-Net/model/ACDC_{}_{}_labeled/{}".format(args.exp, args.labelnum, args.model)
+    print(snapshot_path)
     if not os.path.exists(snapshot_path):
         os.makedirs(snapshot_path)
+        print('create dir: ', snapshot_path)
     if os.path.exists(snapshot_path + '/code'):
         shutil.rmtree(snapshot_path + '/code')
     shutil.copytree('./code/', snapshot_path + '/code',shutil.ignore_patterns(['.git', '__pycache__']))

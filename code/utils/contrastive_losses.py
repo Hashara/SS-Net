@@ -33,7 +33,7 @@ def contrastive_class_to_class_learned_memory(model, features, class_labels, num
 
         if memory_c is not None and features_c.shape[0] > 1 and memory_c.shape[0] > 1:
 
-            memory_c = torch.from_numpy(memory_c).cuda()
+            memory_c = torch.from_numpy(memory_c)
 
             # L2 normalize vectors
             memory_c = F.normalize(memory_c, dim=1) # N, 256
